@@ -5,37 +5,61 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.Writer;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-class Dictionary implements Iterable<String> {
+class Dictionary implements Iterable<char[]> {
 
 	private static class Word implements Comparable<Word> {
 
-		private static final Comparator<Word> BY_LENGTH_FIRSTLETTER_HASH_WORD_COMPARATOR = Comparator
-				.comparing(Word::getLength).thenComparing(Word::getFirstLetter).thenComparing(Word::getHash)
-				.thenComparing(Word::getWord);
+		private static final Comparator<Word> CHAR_ARRAY_COMPARATOR = (a1, a2) -> Arrays.compare(a1.value, a2.value);
+		private static final Comparator<Word> BY_LENGTH_HASH_WORD_COMPARATOR = Comparator.comparing(Word::getLength)
+				.reversed().thenComparing(Word::getHash).thenComparing(CHAR_ARRAY_COMPARATOR);
 
-		private final int length;
-		private final char firstLetter;
-		private final int hash;
-		private final String word;
+		private static final Word searchKey = new Word();
 
-		private Word(String word) {
-			this.length = word.length();
-			this.firstLetter = word.charAt(0);
-			this.hash = word.hashCode();
-			this.word = word;
+		private int length;
+		private int hash;
+		private char[] value;
+
+		private Word() {
+		}
+
+		private Word(String string) {
+			value = string.toCharArray();
+			length = string.length();
+			hash = hashCode(value, 0, value.length);
+		}
+
+		private static int hashCode(char[] a, int startIndex, int endIndex) {
+			if (a == null)
+				return 0;
+			int result = 1;
+			for (int k = startIndex; k < endIndex; k++) {
+				result = (result << 5) - result + a[k];
+			}
+			return result;
+		}
+
+		private static Word getSearchKey(char[] key, int startIndex, int endIndex) {
+			if (startIndex == 0 && endIndex == key.length) {
+				searchKey.value = key;
+			} else {
+				searchKey.value = Arrays.copyOfRange(key, startIndex, endIndex);
+			}
+			searchKey.length = endIndex - startIndex;
+			searchKey.hash = hashCode(key, startIndex, endIndex);
+			return searchKey;
 		}
 
 		@Override
 		public boolean equals(Object obj) {
 			if (obj instanceof Word key) {
-				return BY_LENGTH_FIRSTLETTER_HASH_WORD_COMPARATOR.compare(this, key) == 0;
+				return BY_LENGTH_HASH_WORD_COMPARATOR.compare(this, key) == 0;
 			}
 			return false;
 		}
@@ -47,44 +71,67 @@ class Dictionary implements Iterable<String> {
 
 		@Override
 		public int compareTo(Word word) {
-			return BY_LENGTH_FIRSTLETTER_HASH_WORD_COMPARATOR.compare(this, word);
+			return BY_LENGTH_HASH_WORD_COMPARATOR.compare(this, word);
 		}
 
 		public int getLength() {
 			return length;
 		}
 
-		public char getFirstLetter() {
-			return firstLetter;
-		}
-
 		public int getHash() {
 			return hash;
 		}
 
-		public String getWord() {
-			return word;
+		public char[] getValue() {
+			return value;
 		}
 
 	}
 
 	private final SortedSet<Word> words;
+	private int maxLength;
 
 	private Dictionary() {
 		words = new TreeSet<>();
 	}
 
+	public Dictionary(File file) {
+		this();
+		load(file);
+	}
+
 	public void addWord(String word) {
+		maxLength = Math.max(maxLength, word.length());
 		words.add(new Word(word));
+	}
+
+	public int getMaxLength() {
+		return maxLength;
 	}
 
 	public int getSize() {
 		return words.size();
 	}
 
+	public boolean seek(char[] key) {
+		return seek(key, 0, key.length);
+	}
+
+	public boolean seek(char[] key, int startIndex, int endIndex) {
+		Word seekKey = Word.getSearchKey(key, startIndex, endIndex);
+		SortedSet<Word> seekSet = words.tailSet(seekKey);
+		for (var candidate : seekSet) {
+			char[] value = candidate.getValue();
+			if (Arrays.equals(value, 0, value.length, key, startIndex, endIndex)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	@Override
-	public Iterator<String> iterator() {
-		return new Iterator<String>() {
+	public Iterator<char[]> iterator() {
+		return new Iterator<>() {
 
 			private final Iterator<Word> wordIterator = words.iterator();
 
@@ -94,21 +141,19 @@ class Dictionary implements Iterable<String> {
 			}
 
 			@Override
-			public String next() {
-				return wordIterator.next().word;
+			public char[] next() {
+				return wordIterator.next().value;
 			}
 
 		};
 	}
 
-	public static Dictionary create(File file) {
+	public void load(File file) {
 		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-			var dictionary = new Dictionary();
 			String line;
 			while (reader.ready() && (line = reader.readLine()) != null) {
-				dictionary.addWord(line.strip());
+				addWord(line.strip());
 			}
-			return dictionary;
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new WordFinderException("can't read file %s".formatted(file.getName()), e);
@@ -119,7 +164,7 @@ class Dictionary implements Iterable<String> {
 		BufferedWriter bufferedWriter = new BufferedWriter(writer);
 		try {
 			for (var word : this) {
-				bufferedWriter.append(word);
+				bufferedWriter.append(String.valueOf(word));
 				bufferedWriter.newLine();
 			}
 		} catch (IOException e) {
@@ -129,9 +174,19 @@ class Dictionary implements Iterable<String> {
 	}
 
 	public static void main(String... args) {
-		Dictionary dictionary = Dictionary.create(new File("dictionary.txt"));
-		System.out.printf("Successfully loaded %d entries of dictionary:%n", dictionary.getSize());
-		dictionary.print(new PrintWriter(System.out));
+		Dictionary dictionary = new Dictionary();
+		dictionary.load(new File("dictionary.txt"));
+
+		System.out.printf("Successfully loaded %d entries of dictionary%n", dictionary.getSize());
+		// dictionary.print(new PrintWriter(System.out));
+
+		System.out.printf("%nmaximum length of word is %d%n", dictionary.getMaxLength());
+
+		System.out.printf("%nLooking for word %s: %b", "space", dictionary.seek("space".toCharArray()));
+		System.out.printf("%nLooking for word %s: %b", "ditch", dictionary.seek("ditch".toCharArray()));
+		System.out.printf("%nLooking for word %s: %b", "back", dictionary.seek("back".toCharArray()));
+		System.out.printf("%nLooking for word %s: %b", "123", dictionary.seek("123".toCharArray()));
+
 	}
 
 }
