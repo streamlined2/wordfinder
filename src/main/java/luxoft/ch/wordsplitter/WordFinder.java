@@ -12,15 +12,14 @@ public class WordFinder implements WordSplitter {
 	public WordFinder(File file) {
 		dictionary = new Dictionary(file);
 	}
-	
+
 	private static final int NOT_FOUND = -1;
 
-	public int findFirstWord(int startIndex, char[] text) {
+	private int findWord(char[] text, int startIndex) {
 		int length = Math.min(dictionary.getMaxLength(), text.length - startIndex);
 		while (length > 0) {
 			int endIndex = startIndex + length;
-			boolean found = dictionary.seek(text, startIndex, endIndex);
-			if (found) {
+			if (dictionary.seek(text, startIndex, endIndex)) {
 				return endIndex;
 			}
 			length--;
@@ -28,28 +27,31 @@ public class WordFinder implements WordSplitter {
 		return NOT_FOUND;
 	}
 
-	public Collection<Integer> splitWords(String text) {
+	public Collection<Integer> splitWords(String string) {
+		char[] text = string.toCharArray();
 		List<Integer> indices = new ArrayList<>();
-		// TODO Auto-generated method stub
-
+		int startIndex = 0;
+		while (startIndex < text.length) {
+			int lastIndex = findWord(text, startIndex);
+			if (lastIndex == NOT_FOUND) {
+				startIndex++;
+			} else {
+				indices.add(lastIndex);
+				startIndex = lastIndex;
+			}
+		}
 		return indices;
 	}
 
-	private static final String SAMPLE_PHRASE = "abandonedgreenhousewithgrownplanttrunksandrottendebris";
+	private static final String SAMPLE_PHRASE = "diedandalmostdilapidatedbutnonethelessstillprettyabandonedgreenhousewithgrownplanttrunksandrottendebris";
 
 	public static void main(String... args) {
 		WordFinder wordFinder = new WordFinder(new File("dictionary.txt"));
-//		Collection<Integer> indices = wordFinder.splitWords(SAMPLE_PHRASE);
-//		int startIndex = 0;
-//		for (int endIndex : indices) {
-//			System.out.printf("index %d, word %s%n", SAMPLE_PHRASE.substring(startIndex, endIndex));
-//			startIndex = endIndex;
-//		}
-		int index = wordFinder.findFirstWord(0, "abandoned".toCharArray());
-		if (index != NOT_FOUND) {
-			System.out.println("found word index %d".formatted(index));
-		} else {
-			System.out.println("nothing found");
+		Collection<Integer> indices = wordFinder.splitWords(SAMPLE_PHRASE);
+		int startIndex = 0;
+		for (int endIndex : indices) {
+			System.out.printf("last index %d, word %s%n", endIndex, SAMPLE_PHRASE.substring(startIndex, endIndex));
+			startIndex = endIndex;
 		}
 
 	}

@@ -9,7 +9,7 @@ import java.io.Writer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
-import java.util.SortedSet;
+import java.util.NavigableSet;
 import java.util.TreeSet;
 
 class Dictionary implements Iterable<char[]> {
@@ -88,7 +88,7 @@ class Dictionary implements Iterable<char[]> {
 
 	}
 
-	private final SortedSet<Word> words;
+	private final NavigableSet<Word> words;
 	private int maxLength;
 
 	private Dictionary() {
@@ -119,14 +119,12 @@ class Dictionary implements Iterable<char[]> {
 
 	public boolean seek(char[] key, int startIndex, int endIndex) {
 		Word seekKey = Word.getSearchKey(key, startIndex, endIndex);
-		SortedSet<Word> seekSet = words.tailSet(seekKey);
-		for (var candidate : seekSet) {
-			char[] value = candidate.getValue();
-			if (Arrays.equals(value, 0, value.length, key, startIndex, endIndex)) {
-				return true;
-			}
+		Word word = words.ceiling(seekKey);
+		if (word == null) {
+			return false;
 		}
-		return false;
+		char[] value = word.getValue();
+		return Arrays.equals(value, 0, value.length, key, startIndex, endIndex);
 	}
 
 	@Override
