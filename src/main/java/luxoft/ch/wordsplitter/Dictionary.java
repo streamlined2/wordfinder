@@ -105,6 +105,13 @@ class Dictionary implements Iterable<char[]> {
 		words.add(new Word(word));
 	}
 
+	public String getWord(int index) {
+		Iterator<Word> i = words.iterator();
+		for (int k = index; i.hasNext() && k > 0; k--, i.next()) {
+		}
+		return new String(i.next().value);
+	}
+
 	public int getMaxLength() {
 		return maxLength;
 	}
@@ -120,11 +127,11 @@ class Dictionary implements Iterable<char[]> {
 	public boolean seek(char[] key, int startIndex, int endIndex) {
 		Word seekKey = Word.getSearchKey(key, startIndex, endIndex);
 		Word word = words.ceiling(seekKey);
-		if (word == null) {
-			return false;
+		if (word != null) {
+			char[] value = word.getValue();
+			return Arrays.equals(value, 0, value.length, key, startIndex, endIndex);
 		}
-		char[] value = word.getValue();
-		return Arrays.equals(value, 0, value.length, key, startIndex, endIndex);
+		return false;
 	}
 
 	@Override
