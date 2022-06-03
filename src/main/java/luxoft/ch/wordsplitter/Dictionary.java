@@ -17,13 +17,11 @@ class Dictionary implements Iterable<char[]> {
 	private static class Word implements Comparable<Word> {
 
 		private static final Comparator<Word> CHAR_ARRAY_COMPARATOR = (a1, a2) -> Arrays.compare(a1.value, a2.value);
-		private static final Comparator<Word> BY_LENGTH_HASH_WORD_COMPARATOR = Comparator
-				.comparing(Word::getLength).reversed().thenComparing(Word::getHash)
+		private static final Comparator<Word> BY_LENGTH_HASH_WORD_COMPARATOR = Comparator.comparing(Word::getHash)
 				.thenComparing(CHAR_ARRAY_COMPARATOR);
 
 		private static final Word searchKey = new Word();
 
-		private int length;
 		private int hash;
 		private char[] value;
 
@@ -32,7 +30,6 @@ class Dictionary implements Iterable<char[]> {
 
 		private Word(String string) {
 			value = string.toCharArray();
-			length = string.length();
 			hash = hashCode(value, 0, value.length);
 		}
 
@@ -52,7 +49,6 @@ class Dictionary implements Iterable<char[]> {
 			} else {
 				searchKey.value = Arrays.copyOfRange(key, startIndex, endIndex);
 			}
-			searchKey.length = endIndex - startIndex;
 			searchKey.hash = hashCode(key, startIndex, endIndex);
 			return searchKey;
 		}
@@ -73,10 +69,6 @@ class Dictionary implements Iterable<char[]> {
 		@Override
 		public int compareTo(Word word) {
 			return BY_LENGTH_HASH_WORD_COMPARATOR.compare(this, word);
-		}
-
-		public int getLength() {
-			return length;
 		}
 
 		public int getHash() {
