@@ -34,8 +34,7 @@ public class WordFinder implements WordSplitter {
 
 	public Collection<Integer> splitWords(String string) {
 		char[] text = string.toCharArray();
-		final int probableIndexCount = probableWordCount(string);
-		List<Integer> indices = new ArrayList<>(probableIndexCount);
+		List<Integer> indices = new ArrayList<>(probableWordCount(string));
 		int startIndex = 0;
 		while (startIndex < text.length) {
 			int lastIndex = findWord(text, startIndex);

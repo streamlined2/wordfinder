@@ -16,20 +16,22 @@ class Dictionary implements Iterable<char[]> {
 
 	private static class Word implements Comparable<Word> {
 
-		private static final Comparator<Word> CHAR_ARRAY_COMPARATOR = (a1, a2) -> Arrays.compare(a1.value, a2.value);
-		private static final Comparator<Word> BY_LENGTH_HASH_WORD_COMPARATOR = Comparator.comparing(Word::getHash)
+		private static final Comparator<Word> CHAR_ARRAY_COMPARATOR = (a1, a2) -> Arrays.compare(a1.value, 0, a1.length,
+				a2.value, 0, a2.length);
+		private static final Comparator<Word> BY_HASH_WORD_COMPARATOR = Comparator.comparing(Word::getHash)
 				.thenComparing(CHAR_ARRAY_COMPARATOR);
-
-		private static final Word searchKey = new Word();
 
 		private int hash;
 		private char[] value;
+		private int length;
 
-		private Word() {
+		private Word(int size) {
+			value = new char[size];
 		}
 
 		private Word(String string) {
 			value = string.toCharArray();
+			length = value.length;
 			hash = hashCode(value, 0, value.length);
 		}
 
@@ -43,20 +45,10 @@ class Dictionary implements Iterable<char[]> {
 			return result;
 		}
 
-		private static Word getSearchKey(char[] key, int startIndex, int endIndex) {
-			if (startIndex == 0 && endIndex == key.length) {
-				searchKey.value = key;
-			} else {
-				searchKey.value = Arrays.copyOfRange(key, startIndex, endIndex);
-			}
-			searchKey.hash = hashCode(key, startIndex, endIndex);
-			return searchKey;
-		}
-
 		@Override
 		public boolean equals(Object obj) {
 			if (obj instanceof Word key) {
-				return BY_LENGTH_HASH_WORD_COMPARATOR.compare(this, key) == 0;
+				return BY_HASH_WORD_COMPARATOR.compare(this, key) == 0;
 			}
 			return false;
 		}
@@ -68,7 +60,7 @@ class Dictionary implements Iterable<char[]> {
 
 		@Override
 		public int compareTo(Word word) {
-			return BY_LENGTH_HASH_WORD_COMPARATOR.compare(this, word);
+			return BY_HASH_WORD_COMPARATOR.compare(this, word);
 		}
 
 		public int getHash() {
@@ -79,19 +71,27 @@ class Dictionary implements Iterable<char[]> {
 			return value;
 		}
 
+		public int getLength() {
+			return length;
+		}
+
 	}
 
 	private final NavigableSet<Word> words;
+	private final Word searchKey;
 	private int maxLength;
 	private long totalLength;
 
-	private Dictionary() {
+	public Dictionary(File file) {
 		words = new TreeSet<>();
+		load(file);
+		searchKey = new Word(getMaxLength());
 	}
 
-	public Dictionary(File file) {
-		this();
-		load(file);
+	private Word getSearchKey(char[] key, int startIndex, int endIndex) {
+		System.arraycopy(key, startIndex, searchKey.value, 0, endIndex - startIndex);
+		searchKey.hash = Word.hashCode(key, startIndex, endIndex);
+		return searchKey;
 	}
 
 	public void addWord(String word) {
@@ -124,11 +124,9 @@ class Dictionary implements Iterable<char[]> {
 	}
 
 	public boolean seek(char[] key, int startIndex, int endIndex) {
-		Word seekKey = Word.getSearchKey(key, startIndex, endIndex);
-		Word word = words.ceiling(seekKey);
+		Word word = words.ceiling(getSearchKey(key, startIndex, endIndex));
 		if (word != null) {
-			char[] value = word.getValue();
-			return Arrays.equals(value, 0, value.length, key, startIndex, endIndex);
+			return Arrays.equals(word.getValue(), 0, word.getLength(), key, startIndex, endIndex);
 		}
 		return false;
 	}
@@ -152,7 +150,7 @@ class Dictionary implements Iterable<char[]> {
 		};
 	}
 
-	public void load(File file) {
+	private void load(File file) {
 		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
 			String line;
 			while (reader.ready() && (line = reader.readLine()) != null) {
@@ -178,8 +176,7 @@ class Dictionary implements Iterable<char[]> {
 	}
 
 	public static void main(String... args) {
-		Dictionary dictionary = new Dictionary();
-		dictionary.load(new File("dictionary.txt"));
+		Dictionary dictionary = new Dictionary(new File("dictionary.txt"));
 
 		System.out.printf("Successfully loaded %d entries of dictionary%n", dictionary.getSize());
 		// dictionary.print(new PrintWriter(System.out));
