@@ -17,8 +17,9 @@ class Dictionary implements Iterable<char[]> {
 	private static class Word implements Comparable<Word> {
 
 		private static final Comparator<Word> CHAR_ARRAY_COMPARATOR = (a1, a2) -> Arrays.compare(a1.value, a2.value);
-		private static final Comparator<Word> BY_LENGTH_HASH_WORD_COMPARATOR = Comparator.comparing(Word::getLength)
-				.reversed().thenComparing(Word::getHash).thenComparing(CHAR_ARRAY_COMPARATOR);
+		private static final Comparator<Word> BY_LENGTH_HASH_WORD_COMPARATOR = Comparator
+				.comparing(Word::getLength).reversed().thenComparing(Word::getHash)
+				.thenComparing(CHAR_ARRAY_COMPARATOR);
 
 		private static final Word searchKey = new Word();
 
@@ -90,6 +91,7 @@ class Dictionary implements Iterable<char[]> {
 
 	private final NavigableSet<Word> words;
 	private int maxLength;
+	private long totalLength;
 
 	private Dictionary() {
 		words = new TreeSet<>();
@@ -102,6 +104,7 @@ class Dictionary implements Iterable<char[]> {
 
 	public void addWord(String word) {
 		maxLength = Math.max(maxLength, word.length());
+		totalLength += word.length();
 		words.add(new Word(word));
 	}
 
@@ -114,6 +117,10 @@ class Dictionary implements Iterable<char[]> {
 
 	public int getMaxLength() {
 		return maxLength;
+	}
+
+	public int getAverageLength() {
+		return (int) totalLength / words.size();
 	}
 
 	public int getSize() {
