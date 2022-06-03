@@ -8,16 +8,16 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.NavigableSet;
-import java.util.TreeSet;
+import java.util.Set;
 
 class Dictionary {
 
 	private static class Word implements Comparable<Word> {
 
-		private static final Comparator<Word> WORD_COMPARATOR = Comparator.comparing(Word::getHash)
-				.thenComparing((a1, a2) -> Arrays.compare(a1.value, 0, a1.length, a2.value, 0, a2.length));
+		private static final Comparator<Word> WORD_COMPARATOR = (Word a1, Word a2) -> Arrays.compare(a1.value, 0,
+				a1.length, a2.value, 0, a2.length);
 
 		private int hash;
 		private char[] value;
@@ -61,27 +61,15 @@ class Dictionary {
 			return WORD_COMPARATOR.compare(this, word);
 		}
 
-		public int getHash() {
-			return hash;
-		}
-
-		public char[] getValue() {
-			return value;
-		}
-
-		public int getLength() {
-			return length;
-		}
-
 	}
 
-	private final NavigableSet<Word> words;
+	private final Set<Word> words;
 	private final Word searchKey;
 	private int maxLength;
 	private long totalLength;
 
 	public Dictionary(File file) {
-		words = new TreeSet<>();
+		words = new HashSet<>();
 		load(file);
 		searchKey = new Word(getMaxLength());
 	}
@@ -124,11 +112,7 @@ class Dictionary {
 	}
 
 	public boolean seek(char[] key, int startIndex, int endIndex) {
-		Word word = words.ceiling(getSearchKey(key, startIndex, endIndex));
-		if (word != null) {
-			return Arrays.equals(word.value, 0, word.length, key, startIndex, endIndex);
-		}
-		return false;
+		return words.contains(getSearchKey(key, startIndex, endIndex));
 	}
 
 	private void load(File file) {
