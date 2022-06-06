@@ -12,7 +12,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-class Dictionary {
+class Dictionary implements Iterable<String> {
 
 	private static class Word implements Comparable<Word> {
 
@@ -34,8 +34,6 @@ class Dictionary {
 		}
 
 		private static int hashCode(char[] a, int startIndex, int endIndex) {
-			if (a == null)
-				return 0;
 			int result = 1;
 			for (int k = startIndex; k < endIndex; k++) {
 				result = (result << 5) - result + a[k];
@@ -87,14 +85,6 @@ class Dictionary {
 		words.add(new Word(word));
 	}
 
-	public String getWord(int index) {
-		Iterator<Word> i = words.iterator();
-		for (int k = index; i.hasNext() && k > 0; k--, i.next()) {
-		}
-		Word word = i.next();
-		return new String(word.value, 0, word.length);
-	}
-
 	public int getMaxLength() {
 		return maxLength;
 	}
@@ -138,6 +128,26 @@ class Dictionary {
 			e.printStackTrace();
 			throw new WordFinderException("can't print dictionary", e);
 		}
+	}
+
+	@Override
+	public Iterator<String> iterator() {
+		return new Iterator<String>() {
+
+			private Iterator<Word> iterator = words.iterator();
+
+			@Override
+			public boolean hasNext() {
+				return iterator.hasNext();
+			}
+
+			@Override
+			public String next() {
+				var word = iterator.next();
+				return new String(word.value, 0, word.length);
+			}
+
+		};
 	}
 
 	public static void main(String... args) {

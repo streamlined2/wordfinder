@@ -4,6 +4,7 @@ import java.io.File;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 public class WordFinder implements WordSplitter {
@@ -48,16 +49,6 @@ public class WordFinder implements WordSplitter {
 		return indices;
 	}
 
-	private String prepareTestData(int size) {
-		SecureRandom random = new SecureRandom();
-		StringBuilder builder = new StringBuilder();
-		for (int k = 0; k < size; k++) {
-			int index = random.nextInt(0, dictionary.getSize());
-			builder.append(dictionary.getWord(index));
-		}
-		return builder.toString();
-	}
-
 	private static void printIndicesWords(String data, Collection<Integer> indices) {
 		int startIndex = 0;
 		for (int endIndex : indices) {
@@ -66,17 +57,39 @@ public class WordFinder implements WordSplitter {
 		}
 	}
 
+	private String prepareTestData(int size) {
+		SecureRandom random = new SecureRandom();
+		List<Integer> indices = new ArrayList<>(size);
+		for (int k = 0; k < size; k++) {
+			indices.add(random.nextInt(0, dictionary.getSize()));
+		}
+		Collections.sort(indices);
+
+		StringBuilder builder = new StringBuilder();
+		int prevIndex = 0;
+		var iterator = dictionary.iterator();
+		String value = iterator.next();
+		for (var index : indices) {
+			while (prevIndex < index && iterator.hasNext()) {
+				value = iterator.next();
+				prevIndex++;
+			}
+			builder.append(value);
+		}
+		return builder.toString();
+	}
+
 	private static String reconstructTestData(String data, Collection<Integer> indices) {
 		StringBuilder builder = new StringBuilder();
 		int startIndex = 0;
 		for (int endIndex : indices) {
-			builder.append(data.substring(startIndex, endIndex));
+			builder.append(data, startIndex, endIndex);
 			startIndex = endIndex;
 		}
 		return builder.toString();
 	}
 
-	private static final String SAMPLE_PHRASE = "diedandalmostdilapidatedbutnonethelessstillprettyabandonedgreenhousewithgrownplanttrunksandrottendebris";
+	private static final String SAMPLE_PHRASE = "abandonedaberdeenabsenceabsorptionacademyaccessibilityaccommodationaccordanceaccountabilityaccuracyaceacknowledgeacquisitionactionadaptationadditionadjustmentadmission";
 	private static final int WORD_COUNT = 1_000_000;
 
 	public static void main(String... args) {
@@ -95,11 +108,11 @@ public class WordFinder implements WordSplitter {
 		// printIndicesWords(testData, indices2);
 		String checkData = reconstructTestData(testData, indices2);
 		if (testData.equals(checkData)) {
-			System.out.println("\ntest passed");
+			System.out.println("\ntest passed, splitting took %d msec for %d words".formatted(duration, WORD_COUNT));
 		} else {
 			System.out.println("\ntest failed");
 		}
-		System.out.println("splitting took %d msec for %d words".formatted(duration, WORD_COUNT));
+
 	}
 
 }
