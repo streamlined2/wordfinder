@@ -8,9 +8,13 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 class Dictionary implements Iterable<String> {
 
@@ -44,7 +48,7 @@ class Dictionary implements Iterable<String> {
 		@Override
 		public boolean equals(Object obj) {
 			if (obj instanceof Word key) {
-				return WORD_COMPARATOR.compare(this, key) == 0;
+				return Arrays.equals(value, 0, length, key.value, 0, key.length);
 			}
 			return false;
 		}
@@ -62,14 +66,21 @@ class Dictionary implements Iterable<String> {
 	}
 
 	private final Set<Word> words;
+	private final Map<Integer, Integer> occurrences;
+	private final SortedSet<Map.Entry<Integer, Integer>> sortedByOccurrenceLength;
 	private final Word searchKey;
 	private int maxLength;
 	private long totalLength;
 
 	public Dictionary(File file) {
 		words = new HashSet<>();
-		load(file);
+		occurrences = new HashMap<>();
+		sortedByOccurrenceLength = load(file);
 		searchKey = new Word(getMaxLength());
+	}
+
+	public SortedSet<Map.Entry<Integer, Integer>> getSortedByOccurrenceLength() {
+		return sortedByOccurrenceLength;
 	}
 
 	private Word getSearchKey(char[] key, int startIndex, int endIndex) {
@@ -82,6 +93,7 @@ class Dictionary implements Iterable<String> {
 	public void addWord(String word) {
 		maxLength = Math.max(maxLength, word.length());
 		totalLength += word.length();
+		occurrences.merge(word.length(), 1, (oldValue, value) -> oldValue + 1);
 		words.add(new Word(word));
 	}
 
@@ -105,12 +117,16 @@ class Dictionary implements Iterable<String> {
 		return words.contains(getSearchKey(key, startIndex, endIndex));
 	}
 
-	private void load(File file) {
+	private SortedSet<Map.Entry<Integer, Integer>> load(File file) {
 		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
 			String line;
 			while (reader.ready() && (line = reader.readLine()) != null) {
 				addWord(line.strip());
 			}
+			Comparator<Map.Entry<Integer, Integer>> byValueComparator = Comparator.comparing(Map.Entry::getValue);
+			SortedSet<Map.Entry<Integer, Integer>> set = new TreeSet<>(byValueComparator.reversed());
+			set.addAll(occurrences.entrySet());
+			return set;
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new WordFinderException("can't read file %s".formatted(file.getName()), e);

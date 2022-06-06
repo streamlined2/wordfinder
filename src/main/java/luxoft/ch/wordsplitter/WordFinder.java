@@ -18,13 +18,12 @@ public class WordFinder implements WordSplitter {
 	private static final int NOT_FOUND = -1;
 
 	private int findWord(char[] text, int startIndex) {
-		int length = Math.min(dictionary.getMaxLength(), text.length - startIndex);
-		while (length > 0) {
+		for (var entry : dictionary.getSortedByOccurrenceLength()) {
+			int length = Math.min(entry.getKey(), text.length - startIndex);
 			int endIndex = startIndex + length;
 			if (dictionary.seek(text, startIndex, endIndex)) {
 				return endIndex;
 			}
-			length--;
 		}
 		return NOT_FOUND;
 	}
