@@ -15,6 +15,10 @@ public class WordFinder implements WordSplitter {
 		dictionary = new Dictionary(file);
 	}
 
+	Dictionary getDictionary() {
+		return dictionary;
+	}
+
 	private static final int NOT_FOUND = -1;
 
 	private int findWord(char[] text, int startIndex) {
