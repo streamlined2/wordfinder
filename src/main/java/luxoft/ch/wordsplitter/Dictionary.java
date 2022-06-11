@@ -8,11 +8,13 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Set;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 
 class Dictionary implements Iterable<String> {
+
+	private static final int WORD_MAX_LENGTH = 100;
 
 	private static class Word implements Comparable<Word> {
 
@@ -22,6 +24,7 @@ class Dictionary implements Iterable<String> {
 		private int hash;
 		private char[] value;
 		private int length;
+		private Word subWord;
 
 		private Word(int size) {
 			value = new char[size];
@@ -59,17 +62,26 @@ class Dictionary implements Iterable<String> {
 			return WORD_COMPARATOR.compare(this, word);
 		}
 
+		@Override
+		public String toString() {
+			StringBuilder b = new StringBuilder("value: " + String.valueOf(value, 0, length));
+			if (subWord != null) {
+				b.append(", sub word: " + String.valueOf(subWord.value, 0, subWord.length));
+			}
+			return b.toString();
+		}
+
 	}
 
-	private final Set<Word> words;
+	private final NavigableSet<Word> words;
 	private final Word searchKey;
 	private int maxLength;
 	private long totalLength;
-
+	
 	public Dictionary(File file) {
-		words = new HashSet<>();
+		words = new TreeSet<>();
+		searchKey = new Word(WORD_MAX_LENGTH);
 		load(file);
-		searchKey = new Word(getMaxLength());
 	}
 
 	private Word getSearchKey(char[] key, int startIndex, int endIndex) {
@@ -79,10 +91,21 @@ class Dictionary implements Iterable<String> {
 		return searchKey;
 	}
 
-	public void addWord(String word) {
-		maxLength = Math.max(maxLength, word.length());
-		totalLength += word.length();
-		words.add(new Word(word));
+	public void addWord(String string) {
+		maxLength = Math.max(maxLength, string.length());
+		totalLength += string.length();
+		Word word = new Word(string);
+		word.subWord = findSubWord(word.value, word.length);
+		words.add(word);
+	}
+
+	private Word findSubWord(char[] value, int length) {
+		for (int k = length - 1; k > 0; k--) {
+			if (seek(value, 0, k)) {
+				return find(value, k);
+			}
+		}
+		return null;
 	}
 
 	public int getMaxLength() {
@@ -95,6 +118,15 @@ class Dictionary implements Iterable<String> {
 
 	public int getSize() {
 		return words.size();
+	}
+
+	public Word find(String string) {
+		return find(string.toCharArray(), string.length());
+	}
+	
+	public Word find(char[] key, int length) {
+		Word seekKey = getSearchKey(key, 0, length);
+		return words.ceiling(seekKey);
 	}
 
 	public boolean seek(char[] key) {
@@ -162,6 +194,12 @@ class Dictionary implements Iterable<String> {
 		System.out.printf("%nLooking for word %s: %b", "ditch", dictionary.seek("ditch".toCharArray()));
 		System.out.printf("%nLooking for word %s: %b", "back", dictionary.seek("back".toCharArray()));
 		System.out.printf("%nLooking for word %s: %b", "123", dictionary.seek("123".toCharArray()));
+		
+		System.out.printf("%nLooking for word %s", dictionary.find("additional"));
+		System.out.printf("%nLooking for word %s", dictionary.find("abandoned"));
+		System.out.printf("%nLooking for word %s", dictionary.find("absence"));
+		System.out.printf("%nLooking for word %s", dictionary.find("absolutely"));
+		System.out.printf("%nLooking for word %s", dictionary.find("absolute"));
 
 	}
 
