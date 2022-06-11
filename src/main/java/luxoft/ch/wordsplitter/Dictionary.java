@@ -16,7 +16,7 @@ class Dictionary implements Iterable<String> {
 
 	private static final int WORD_MAX_LENGTH = 100;
 
-	private static class Word implements Comparable<Word> {
+	static class Word implements Comparable<Word> {
 
 		private static final Comparator<Word> WORD_COMPARATOR = (Word a1, Word a2) -> Arrays.compare(a1.value, 0,
 				a1.length, a2.value, 0, a2.length);
@@ -42,6 +42,14 @@ class Dictionary implements Iterable<String> {
 				result = (result << 5) - result + a[k];
 			}
 			return result;
+		}
+
+		int getLength() {
+			return length;
+		}
+		
+		Word getSubWord() {
+			return subWord;
 		}
 
 		@Override
@@ -77,7 +85,7 @@ class Dictionary implements Iterable<String> {
 	private final Word searchKey;
 	private int maxLength;
 	private long totalLength;
-	
+
 	public Dictionary(File file) {
 		words = new TreeSet<>();
 		searchKey = new Word(WORD_MAX_LENGTH);
@@ -123,10 +131,15 @@ class Dictionary implements Iterable<String> {
 	public Word find(String string) {
 		return find(string.toCharArray(), string.length());
 	}
-	
+
 	public Word find(char[] key, int length) {
-		Word seekKey = getSearchKey(key, 0, length);
-		return words.ceiling(seekKey);
+		return find(key, 0, length);
+	}
+
+	public Word find(char[] key, int startIndex, int endIndex) {
+		Word seekKey = getSearchKey(key, startIndex, endIndex);
+		Word word = words.ceiling(seekKey);
+		return (word == null || !word.equals(seekKey)) ? null : word;
 	}
 
 	public boolean seek(char[] key) {
@@ -194,7 +207,7 @@ class Dictionary implements Iterable<String> {
 		System.out.printf("%nLooking for word %s: %b", "ditch", dictionary.seek("ditch".toCharArray()));
 		System.out.printf("%nLooking for word %s: %b", "back", dictionary.seek("back".toCharArray()));
 		System.out.printf("%nLooking for word %s: %b", "123", dictionary.seek("123".toCharArray()));
-		
+
 		System.out.printf("%nLooking for word %s", dictionary.find("additional"));
 		System.out.printf("%nLooking for word %s", dictionary.find("abandoned"));
 		System.out.printf("%nLooking for word %s", dictionary.find("absence"));

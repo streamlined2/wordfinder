@@ -7,6 +7,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import luxoft.ch.wordsplitter.Dictionary.Word;
+
 public class WordFinder implements WordSplitter {
 
 	private final Dictionary dictionary;
@@ -21,18 +23,6 @@ public class WordFinder implements WordSplitter {
 
 	private static final int NOT_FOUND = -1;
 
-	private int findWord(char[] text, int startIndex) {
-		int length = Math.min(dictionary.getMaxLength(), text.length - startIndex);
-		while (length > 0) {
-			int endIndex = startIndex + length;
-			if (dictionary.seek(text, startIndex, endIndex)) {
-				return endIndex;
-			}
-			length--;
-		}
-		return NOT_FOUND;
-	}
-
 	private int probableWordCount(String string) {
 		return (int) (string.length() * 1.25d / dictionary.getAverageLength());
 	}
@@ -42,7 +32,7 @@ public class WordFinder implements WordSplitter {
 		List<Integer> indices = new ArrayList<>(probableWordCount(string));
 		int startIndex = 0;
 		while (startIndex < text.length) {
-			int lastIndex = findWord(text, startIndex);
+			int lastIndex = getWord(text, startIndex);
 			if (lastIndex == NOT_FOUND) {
 				startIndex++;
 			} else {
@@ -51,6 +41,27 @@ public class WordFinder implements WordSplitter {
 			}
 		}
 		return indices;
+	}
+
+	private int getWord(char[] text, int startIndex) {
+		Word word = findWord(text, startIndex);
+		if (word == null) {
+			return NOT_FOUND;
+		}
+		Word selectedWord = word;
+		int bestTwoWordsLength = selectedWord.getLength();
+		do {
+			Word rightWord = findWord(text, startIndex + word.getLength());
+			if (rightWord != null) {
+				int twoWordsLength = word.getLength() + rightWord.getLength();
+				if (bestTwoWordsLength < twoWordsLength) {
+					bestTwoWordsLength = twoWordsLength;
+					selectedWord = word;
+				}
+			}
+			word = word.getSubWord();
+		} while (word != null);
+		return startIndex + selectedWord.getLength();
 	}
 
 	private static void printIndicesWords(String data, Collection<Integer> indices) {
@@ -83,6 +94,19 @@ public class WordFinder implements WordSplitter {
 		return builder.toString();
 	}
 
+	private Word findWord(char[] text, int startIndex) {
+		int length = Math.min(dictionary.getMaxLength(), text.length - startIndex);
+		while (length > 0) {
+			int endIndex = startIndex + length;
+			Word word = dictionary.find(text, startIndex, endIndex);
+			if (word != null) {
+				return word;
+			}
+			length--;
+		}
+		return null;
+	}
+
 	private static String reconstructTestData(String data, Collection<Integer> indices) {
 		StringBuilder builder = new StringBuilder();
 		int startIndex = 0;
@@ -94,6 +118,7 @@ public class WordFinder implements WordSplitter {
 	}
 
 	private static final String SAMPLE_PHRASE = "abandonedaberdeenabsenceabsorptionacademyaccessibilityaccommodationaccordanceaccountabilityaccuracyaceacknowledgeacquisitionactionadaptationadditionadjustmentadmission";
+	private static final String SAMPLE_PHRASE_2 = "additionalgorithm";
 	private static final int WORD_COUNT = 1_000_000;
 
 	public static void main(String... args) {
@@ -103,14 +128,18 @@ public class WordFinder implements WordSplitter {
 		Collection<Integer> indices = wordFinder.splitWords(SAMPLE_PHRASE);
 		printIndicesWords(SAMPLE_PHRASE, indices);
 
-		System.out.println("\ntest #2");
+		System.out.println("\ntest #2: splitting phrase: %s".formatted(SAMPLE_PHRASE_2));
+		Collection<Integer> indices2 = wordFinder.splitWords(SAMPLE_PHRASE_2);
+		printIndicesWords(SAMPLE_PHRASE_2, indices2);
+
+		System.out.println("\ntest #3");
 		String testData = wordFinder.prepareTestData(WORD_COUNT);
 		// System.out.println("\nsplitting phrase: %s".formatted(testData));
 		long start = System.currentTimeMillis();
-		Collection<Integer> indices2 = wordFinder.splitWords(testData);
+		Collection<Integer> indices3 = wordFinder.splitWords(testData);
 		long duration = System.currentTimeMillis() - start;
-		// printIndicesWords(testData, indices2);
-		String checkData = reconstructTestData(testData, indices2);
+		// printIndicesWords(testData, indices3);
+		String checkData = reconstructTestData(testData, indices3);
 		if (testData.equals(checkData)) {
 			System.out.println("\ntest passed, splitting took %d msec for %d words".formatted(duration, WORD_COUNT));
 		} else {
